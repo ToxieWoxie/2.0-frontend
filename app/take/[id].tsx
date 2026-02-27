@@ -34,27 +34,13 @@ const SERIF = Platform.select({
 
 function isAuthError(e: any): boolean {
   const msg = String(e?.message ?? e ?? "").toLowerCase();
-  return (
-    msg.includes("not authenticated") ||
-    msg.includes("unauthorized") ||
-    msg.includes("401") ||
-    msg.includes("permission denied")
-  );
+  return msg.includes("not authenticated") || msg.includes("unauthorized") || msg.includes("401") || msg.includes("permission denied");
 }
 
 function AuthRequiredScreen(props: { onLogin: () => void; onBack: () => void }) {
   return (
-    <LinearGradient
-      colors={["#061A40", "#0F766E"]}
-      start={{ x: 0, y: 0 }}
-      end={{ x: 1, y: 1 }}
-      style={stylesAuth.screen}
-    >
-      <ScrollView
-        style={stylesAuth.scrollView}
-        contentContainerStyle={stylesAuth.scrollContent}
-        showsVerticalScrollIndicator
-      >
+    <LinearGradient colors={["#061A40", "#0F766E"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={stylesAuth.screen}>
+      <ScrollView style={stylesAuth.scrollView} contentContainerStyle={stylesAuth.scrollContent} showsVerticalScrollIndicator>
         <View style={stylesAuth.header}>
           <Text style={stylesAuth.title}>Synesthete</Text>
           <View style={stylesAuth.topButtons}>
@@ -71,9 +57,7 @@ function AuthRequiredScreen(props: { onLogin: () => void; onBack: () => void }) 
 
         <View style={stylesAuth.bodyWrap}>
           <Text style={stylesAuth.h1}>Login required</Text>
-          <Text style={stylesAuth.p}>
-            You need to be logged in to take this quiz.
-          </Text>
+          <Text style={stylesAuth.p}>You need to be logged in to take this quiz.</Text>
 
           <View style={stylesAuth.actions}>
             <Pressable
@@ -111,9 +95,7 @@ function CheckboxRow(props: { label: string; value: boolean; onChange: (next: bo
       accessibilityState={{ checked: props.value }}
       accessibilityLabel={props.label}
     >
-      <View style={[styles.checkboxBox, props.value && styles.checkboxBoxOn]}>
-        {props.value ? <Text style={styles.checkboxMark}>✓</Text> : null}
-      </View>
+      <View style={[styles.checkboxBox, props.value && styles.checkboxBoxOn]}>{props.value ? <Text style={styles.checkboxMark}>✓</Text> : null}</View>
       <Text style={styles.checkboxLabel}>{props.label}</Text>
     </Pressable>
   );
@@ -208,11 +190,7 @@ function ResponsiveImage({ uri }: { uri: string }) {
 
   return (
     <View style={{ marginTop: 10 }}>
-      <RNImage
-        source={{ uri }}
-        style={[styles.qImageNative, aspect ? { aspectRatio: aspect, height: undefined } : null]}
-        resizeMode="contain"
-      />
+      <RNImage source={{ uri }} style={[styles.qImageNative, aspect ? { aspectRatio: aspect, height: undefined } : null]} resizeMode="contain" />
     </View>
   );
 }
@@ -270,80 +248,51 @@ function WebAudioPlayer({ src }: { src: string }) {
       stopRaf();
       a.pause();
       a.src = "";
+      audioRef.current = null;
       a.removeEventListener("loadedmetadata", onLoaded);
       a.removeEventListener("play", onPlay);
       a.removeEventListener("pause", onPause);
       a.removeEventListener("ended", onEnded);
       a.removeEventListener("timeupdate", onTime);
-      audioRef.current = null;
     };
   }, [src]);
 
-  if (Platform.OS !== "web" || !WebDiv) return null;
+  const toggle = () => {
+    const a = audioRef.current;
+    if (!a) return;
+    if (playing) a.pause();
+    else a.play().catch(() => {});
+  };
 
   const pct = duration > 0 ? clamp(current / duration, 0, 1) : 0;
 
-  const toggle = async () => {
-    const a = audioRef.current;
-    if (!a) return;
-    if (a.paused) await a.play();
-    else a.pause();
-  };
-
-  const seek = (e: any) => {
-    const a = audioRef.current;
-    if (!a || duration <= 0) return;
-
-    const rect = e?.currentTarget?.getBoundingClientRect?.();
-    if (!rect) return;
-
-    const x = clamp((e.clientX - rect.left) / rect.width, 0, 1);
-    a.currentTime = x * duration;
-    setCurrent(a.currentTime);
-  };
-
   return (
-    <View style={{ marginTop: 10 }}>
-      <View style={{ flexDirection: "row", alignItems: "center", gap: 12 as any }}>
-        <Pressable onPress={() => void toggle()} style={({ pressed }) => [styles.btnSm, pressed && styles.pressed]}>
-          <Text style={styles.btnSmText}>{playing ? "Pause" : "Play"}</Text>
-        </Pressable>
+    <View style={{ marginTop: 10, gap: 10 }}>
+      <Pressable onPress={toggle} style={({ pressed }) => [styles.btnSmall, pressed && styles.pressed]}>
+        <Text style={styles.btnSmallText}>{playing ? "Pause audio" : "Play audio"}</Text>
+      </Pressable>
 
-        <Text style={[styles.timeText, tabularNumsStyle] as any}>
-          {formatTime(current)} / {formatTime(duration)}
-        </Text>
+      <View style={{ gap: 6 }}>
+        <View style={styles.audioMetaRow}>
+          <Text style={styles.audioMetaText}>{formatTime(current)}</Text>
+          <Text style={styles.audioMetaText}>{formatTime(duration)}</Text>
+        </View>
+        <View style={styles.audioBarOuter}>
+          {React.createElement(WebDiv, {
+            style: {
+              width: `${Math.round(pct * 100)}%`,
+              height: "100%",
+              background: "#9ca3af",
+            },
+          })}
+        </View>
       </View>
-
-      {React.createElement(WebDiv, {
-        role: "progressbar",
-        "aria-valuemin": 0,
-        "aria-valuemax": duration || 0,
-        "aria-valuenow": current || 0,
-        onClick: seek,
-        style: {
-          marginTop: 10,
-          height: 12,
-          borderRadius: 999,
-          background: "#f3f4f6",
-          overflow: "hidden",
-          cursor: duration > 0 ? "pointer" : "default",
-          border: "1px solid #e5e7eb",
-        },
-        children: React.createElement(WebDiv, {
-          style: {
-            height: "100%",
-            width: `${Math.round(pct * 100)}%`,
-            background: "#9ca3af",
-          },
-        }),
-      })}
     </View>
   );
 }
 
 export default function TakeScreen() {
-  const params = useLocalSearchParams<{ id?: string }>();
-  const id = String(params.id ?? "");
+  const { id, assessmentDone } = useLocalSearchParams<{ id: string; assessmentDone?: string }>();
 
   const [project, setProject] = useState<LoadedProject | null>(null);
   const [loading, setLoading] = useState(true);
@@ -403,6 +352,16 @@ export default function TakeScreen() {
   }, [id]);
 
   const title = useMemo(() => project?.title ?? "Take", [project?.title]);
+
+  const assessmentRequired = Boolean((project as any)?.includeAssessment);
+  const hasCompletedAssessment = String(assessmentDone ?? "") === "1";
+
+  // ✅ PATCH: go to your real assessment route (/assessment/[id])
+  const goToAssessment = useCallback(() => {
+    const returnTo = `/take/${encodeURIComponent(id)}`;
+    router.replace((`/assessment/${encodeURIComponent(id)}?returnTo=${encodeURIComponent(returnTo)}` as any));
+  }, [id]);
+
   const setAnswer = useCallback((qId: string, v: string) => setAnswers((m) => ({ ...m, [qId]: v })), []);
 
   const missingRequired = useMemo(() => {
@@ -447,11 +406,8 @@ export default function TakeScreen() {
     }
   }, [answers, missingRequired, project, recordConsent]);
 
-  const goLogin = () => router.replace(("/login" as any) ?? ("/login" as any));
-  const goBack = () => router.back();
-
   if (authRequired) {
-    return <AuthRequiredScreen onLogin={goLogin} onBack={goBack} />;
+    return <AuthRequiredScreen onLogin={() => router.replace("/login")} onBack={() => router.back()} />;
   }
 
   if (loading) {
@@ -471,11 +427,51 @@ export default function TakeScreen() {
       <LinearGradient colors={["#ffffff", "#ffffff"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.screen}>
         <SafeAreaView style={styles.safeArea}>
           <View style={styles.loadingWrap}>
-            <Text style={styles.loadingText}>{loadErr ? loadErr : "Project not found."}</Text>
-            <Pressable onPress={() => router.back()} style={({ pressed }) => [styles.btnSm, pressed && styles.pressed]}>
-              <Text style={styles.btnSmText}>Back</Text>
+            <Text style={styles.loadingText}>Could not load quiz.</Text>
+            {loadErr ? <Text style={styles.subtle}>{loadErr}</Text> : null}
+            <Pressable onPress={() => router.replace("/library")} style={({ pressed }) => [styles.submitButton, pressed && styles.pressed]}>
+              <Text style={styles.submitButtonText}>Back to library</Text>
             </Pressable>
           </View>
+        </SafeAreaView>
+      </LinearGradient>
+    );
+  }
+
+  // ✅ existing gate behavior preserved (now routes correctly)
+  if (assessmentRequired && !hasCompletedAssessment) {
+    return (
+      <LinearGradient colors={["#ffffff", "#ffffff"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.screen}>
+        <SafeAreaView style={styles.safeArea}>
+          <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : undefined}>
+            <View style={{ flex: 1 }}>
+              <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator>
+                <View style={styles.header}>
+                  <Text style={styles.title}>{title}</Text>
+                  <Pressable onPress={() => router.back()} style={({ pressed }) => [styles.btnSmall, pressed && styles.pressed]}>
+                    <Text style={styles.btnSmallText}>Back</Text>
+                  </Pressable>
+                </View>
+
+                {project.description ? <Text style={styles.description}>{project.description}</Text> : null}
+
+                <View style={styles.card}>
+                  <Text style={styles.sectionTitle}>Assessment required</Text>
+                  <Text style={styles.paragraph}>
+                    The test administrator has enabled a required assessment. Please complete the assessment before you can proceed to the quiz.
+                  </Text>
+
+                  <Pressable onPress={goToAssessment} style={({ pressed }) => [styles.submitButton, pressed && styles.pressed]}>
+                    <Text style={styles.submitButtonText}>Begin Assessment</Text>
+                  </Pressable>
+                </View>
+
+                <View style={{ height: 120 }} />
+              </ScrollView>
+
+              <BackButtonBar />
+            </View>
+          </KeyboardAvoidingView>
         </SafeAreaView>
       </LinearGradient>
     );
@@ -484,43 +480,42 @@ export default function TakeScreen() {
   return (
     <LinearGradient colors={["#ffffff", "#ffffff"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.screen}>
       <SafeAreaView style={styles.safeArea}>
-        <KeyboardAvoidingView style={styles.safeArea} behavior={Platform.OS === "ios" ? "padding" : undefined}>
-          <View style={styles.flex}>
-            <ScrollView contentContainerStyle={styles.container}>
-              <View style={styles.headerWide}>
-                <View style={styles.headerRow}>
-                  <Text style={styles.title}>{title}</Text>
-                  <Pressable onPress={() => router.back()} style={({ pressed }) => [styles.btnSm, pressed && styles.pressed]}>
-                    <Text style={styles.btnSmText}>Back</Text>
-                  </Pressable>
-                </View>
+        <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : undefined}>
+          <View style={{ flex: 1 }}>
+            <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator>
+              <View style={styles.header}>
+                <Text style={styles.title}>{title}</Text>
+                <Pressable onPress={() => router.back()} style={({ pressed }) => [styles.btnSmall, pressed && styles.pressed]}>
+                  <Text style={styles.btnSmallText}>Back</Text>
+                </Pressable>
+              </View>
 
-                {project.description ? <Text style={styles.desc}>{project.description}</Text> : null}
+              {project.description ? <Text style={styles.description}>{project.description}</Text> : null}
 
-                {project.recordUserEnabled ? (
+              {project.recordUserEnabled ? (
+                <View style={styles.card}>
+                  <Text style={styles.sectionTitle}>Recording consent</Text>
+                  <Text style={styles.paragraph}>This quiz records the user. You must provide consent to submit.</Text>
+
                   <View style={{ marginTop: 10 }}>
                     <CheckboxRow label="Allow to record user" value={recordConsent} onChange={setRecordConsent} />
                     {recordConsent && meUsername ? <Text style={styles.subtle}>Username: {meUsername}</Text> : null}
                   </View>
-                ) : null}
-              </View>
+                </View>
+              ) : null}
+
+              <View style={{ height: 8 }} />
 
               {project.questions.map((q, idx) => (
-                <Question
-                  key={q.id}
-                  q={q}
-                  index={idx}
-                  value={String(answers[q.id] ?? "")}
-                  onChange={(v) => setAnswer(q.id, v)}
-                />
+                <Question key={q.id} q={q} index={idx} value={String(answers[q.id] ?? "")} onChange={(v) => setAnswer(q.id, v)} />
               ))}
 
               <Pressable
                 onPress={onSubmit}
                 disabled={submitting || (project?.recordUserEnabled && !recordConsent)}
-                style={({ pressed }) => [styles.btnWide, submitting && styles.disabled, pressed && !submitting && styles.pressed]}
+                style={({ pressed }) => [styles.submitButton, submitting && styles.disabled, pressed && !submitting && styles.pressed]}
               >
-                <Text style={styles.btnWideText}>{submitting ? "Submitting…" : "Submit"}</Text>
+                <Text style={styles.submitButtonText}>{submitting ? "Submitting…" : "Submit"}</Text>
               </Pressable>
 
               <View style={{ height: 120 }} />
@@ -548,26 +543,27 @@ function Question({ q, index, value, onChange }: { q: QuestionDraft; index: numb
   }, [audio]);
 
   return (
-    <View style={styles.cardNarrow}>
+    <View style={styles.card}>
       <View style={styles.qHeaderRow}>
-        <Text style={styles.qTitle}>
-          {index + 1}. {q.prompt || "Untitled question"}
+        <Text style={styles.sectionTitle}>
+          <Text style={tabularNumsStyle}>
+            {index + 1}
+            {q.required ? "*" : ""}.
+          </Text>{" "}
+          {q.prompt || "Untitled question"}
         </Text>
-        {q.required ? <Text style={styles.requiredStar}>*</Text> : null}
       </View>
 
       {img ? <ResponsiveImage uri={img} /> : null}
 
       {audio ? (
-        <View style={{ gap: 10 }}>
-          <Text style={styles.subtle}>Audio:</Text>
-          {Platform.OS === "web" ? <WebAudioPlayer src={audio} /> : null}
-          {Platform.OS !== "web" ? (
-            <Pressable onPress={openAudio} style={({ pressed }) => [styles.btnSm, pressed && styles.pressed]}>
-              <Text style={styles.btnSmText}>Open audio</Text>
-            </Pressable>
-          ) : null}
-        </View>
+        Platform.OS === "web" ? (
+          <WebAudioPlayer src={audio} />
+        ) : (
+          <Pressable onPress={openAudio} style={({ pressed }) => [styles.btnSmall, pressed && styles.pressed]}>
+            <Text style={styles.btnSmallText}>Open audio</Text>
+          </Pressable>
+        )
       ) : null}
 
       {q.type === "short_answer" ? (
@@ -591,246 +587,61 @@ function Question({ q, index, value, onChange }: { q: QuestionDraft; index: numb
               <Pressable
                 key={`${q.id}_${i}`}
                 onPress={() => onChange(label)}
-                style={({ pressed }) => [styles.choiceRow, pressed && styles.pressed]}
+                style={({ pressed }) => [styles.choiceRow, picked && styles.choiceRowOn, pressed && styles.pressed]}
               >
-                <View style={[styles.radio, picked && styles.radioOn]} />
+                <View style={[styles.choiceDot, picked && styles.choiceDotOn]} />
                 <Text style={styles.choiceText}>{label}</Text>
               </Pressable>
             );
           })}
         </View>
-      ) : (
+      ) : q.type === "color_wheel" ? (
         <View style={{ gap: 12 }}>
-          <View style={styles.colorRow}>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+            <View style={[styles.colorSwatch, { backgroundColor: isValidHex(value) ? normalizeHex(value) : "#ffffff" }]} />
             <TextInput
               value={value}
-              onChangeText={(t) => onChange(t)}
+              onChangeText={onChange}
               placeholder="#RRGGBB"
               placeholderTextColor="#9ca3af"
-              style={[styles.input, { flex: 1 }]}
+              style={[styles.input, { flex: 1, minWidth: 180 }]}
               autoCapitalize="none"
+              autoCorrect={false}
             />
             <WebColorPicker value={value} onChange={onChange} />
           </View>
 
-          <View style={styles.swatchGrid}>
+          <View style={styles.presetRow}>
             {PRESET.map((hex) => {
-              const on = normalizeHex(value) === hex;
+              const active = normalizeHex(value) === normalizeHex(hex);
               return (
                 <Pressable
                   key={hex}
                   onPress={() => onChange(hex)}
-                  style={({ pressed }) => [
-                    styles.swatchBox,
-                    { backgroundColor: hex },
-                    on && { borderColor: "#111827" },
-                    pressed && styles.pressed,
-                  ]}
+                  style={({ pressed }) => [styles.presetDot, { backgroundColor: hex }, active && styles.presetDotOn, pressed && styles.pressed]}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Preset color ${hex}`}
                 />
               );
             })}
           </View>
 
-          {!value.trim() || isValidHex(value) ? null : <Text style={styles.error}>Invalid hex. Use #RRGGBB.</Text>}
+          <Text style={styles.subtle}>Enter a hex color (e.g., #ff8800).</Text>
         </View>
+      ) : (
+        <Text style={styles.subtle}>Unsupported question type: {String((q as any)?.type ?? "")}</Text>
       )}
     </View>
   );
 }
 
-const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: "#f6f7f9" },
-  safeArea: { flex: 1, backgroundColor: "#f6f7f9" },
-  flex: { flex: 1 },
-
-  container: { paddingTop: 18, paddingHorizontal: 18, gap: 14, width: "100%", backgroundColor: "#f6f7f9" },
-
-  headerWide: {
-    maxWidth: 1200,
-    width: "100%",
-    alignSelf: "center",
-    borderWidth: 1,
-    borderColor: "#e5e7eb",
-    borderRadius: 14,
-    padding: 16,
-    backgroundColor: "#ffffff",
-    gap: 10,
-  },
-  headerRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap", rowGap: 10 },
-
-  title: { fontSize: 34, fontWeight: "900", color: "#111827", flexShrink: 1, minWidth: 0 },
-  desc: { color: "#374151", fontSize: 14, lineHeight: 22 },
-
-  loadingWrap: { flex: 1, alignItems: "center", justifyContent: "center", gap: 14 },
-  loadingText: { color: "#111827", fontSize: 16, fontWeight: "800" },
-
-  cardNarrow: {
-    maxWidth: 760,
-    width: "100%",
-    alignSelf: "center",
-    borderWidth: 1,
-    borderColor: "#e5e7eb",
-    borderRadius: 14,
-    padding: 16,
-    gap: 12,
-    backgroundColor: "#ffffff",
-  },
-
-  qHeaderRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 10 },
-  qTitle: { flex: 1, fontSize: 14, fontWeight: "900", color: "#111827" },
-  requiredStar: { fontSize: 18, fontWeight: "900", color: "#b00020", marginLeft: 6 },
-
-  qImageNative: { width: "100%", height: 240, borderRadius: 12, backgroundColor: "#f3f4f6" },
-
-  subtle: { color: "#6b7280", fontSize: 12 },
-  error: { color: "#111827", fontSize: 12, fontWeight: "900" },
-
-  input: {
-    height: 44,
-    borderWidth: 1,
-    borderColor: "#e5e7eb",
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    fontSize: 14,
-    backgroundColor: "#ffffff",
-    color: "#111827",
-  },
-  longInput: { height: 120, paddingTop: 10, textAlignVertical: "top" },
-
-  choiceRow: { flexDirection: "row", alignItems: "center", gap: 12 },
-  radio: { width: 18, height: 18, borderRadius: 999, borderWidth: 2, borderColor: "#d1d5db" },
-  radioOn: { backgroundColor: "#111827", borderColor: "#111827" },
-  choiceText: { fontSize: 14, color: "#111827" },
-
-  btnSm: {
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: "#e5e7eb",
-    backgroundColor: "#f3f4f6",
-  },
-  btnSmText: { fontWeight: "900", color: "#111827" },
-
-  btnWide: {
-    maxWidth: 760,
-    width: "100%",
-    alignSelf: "center",
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: "#e5e7eb",
-    backgroundColor: "#ffffff",
-    alignItems: "center",
-  },
-  btnWideText: { fontWeight: "900", color: "#111827" },
-
-  timeText: { fontWeight: "900", color: "#111827" },
-
-  pressed: { opacity: 0.78 },
-  disabled: { opacity: 0.55 },
-
-  checkboxRow: { flexDirection: "row", alignItems: "center", gap: 10 as any },
-  checkboxBox: {
-    width: 18,
-    height: 18,
-    borderRadius: 4,
-    borderWidth: 1,
-    borderColor: "#d1d5db",
-    backgroundColor: "#fff",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  checkboxBoxOn: { backgroundColor: "#111827", borderColor: "#111827" },
-  checkboxMark: { color: "#fff", fontSize: 12, fontWeight: "900" },
-  checkboxLabel: { fontSize: 13, fontWeight: "900", color: "#111827" },
-
-  colorRow: { flexDirection: "row", alignItems: "center", gap: 10 },
-  swatchGrid: { flexDirection: "row", gap: 10, flexWrap: "wrap" },
-  swatchBox: { width: 34, height: 34, borderRadius: 12, borderWidth: 2, borderColor: "#e5e7eb" },
-});
-
 const stylesAuth = StyleSheet.create({
   screen: { flex: 1 },
   scrollView: { flex: 1 },
-  scrollContent: {
-    paddingTop: 50,
-    paddingHorizontal: 20,
-    paddingBottom: 120,
-  },
-
-  header: {
-    marginTop: -50,
-    paddingTop: 50,
-    backgroundColor: "rgba(38, 83, 108, 0.62)",
-    marginHorizontal: -20,
-    paddingHorizontal: 20,
-    paddingBottom: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: "rgba(255,255,255,0.15)",
-    marginBottom: 20,
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    flexWrap: "wrap",
-    rowGap: 12,
-  },
-
-  title: {
-    fontSize: 80,
-    fontWeight: "bold",
-    color: "#fff",
-    fontFamily: SERIF,
-    flexShrink: 1,
-    minWidth: 0,
-  },
-
-  topButtons: {
-    flexDirection: "row",
-    gap: 12,
-    alignItems: "center",
-    flexWrap: "wrap",
-    justifyContent: "flex-end",
-  },
-
-  bodyWrap: {
-    paddingHorizontal: 24,
-    paddingTop: 20,
-    maxWidth: 900,
-    alignSelf: "center",
-    width: "100%",
-  },
-
-  h1: {
-    fontSize: 36,
-    fontWeight: "800",
-    marginBottom: 18,
-    textAlign: "center",
-    color: "#fff",
-    fontFamily: SERIF,
-    marginTop: 40,
-  },
-
-  p: {
-    fontSize: 16,
-    lineHeight: 30,
-    opacity: 0.92,
-    color: "#fff",
-    fontFamily: SERIF,
-    textAlign: "center",
-  },
-
-  actions: {
-    marginTop: 28,
-    flexDirection: "row",
-    gap: 12,
-    justifyContent: "center",
-    flexWrap: "wrap",
-  },
-
-  pressed: { opacity: 0.75 },
-
+  scrollContent: { padding: 20, paddingTop: 40, paddingBottom: 60 },
+  header: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", rowGap: 10 },
+  title: { fontSize: 40, fontWeight: "900", color: "#fff", fontFamily: SERIF },
+  topButtons: { flexDirection: "row", gap: 12, flexWrap: "wrap" },
   buttonPrimary: {
     backgroundColor: "rgba(255, 255, 255, 0.35)",
     paddingVertical: 10,
@@ -840,7 +651,6 @@ const stylesAuth = StyleSheet.create({
     borderColor: "rgba(255,255,255,0.15)",
     cursor: Platform.OS === "web" ? "pointer" : "auto",
   },
-
   buttonDark: {
     backgroundColor: "rgba(255, 255, 255, 0.35)",
     paddingVertical: 10,
@@ -850,10 +660,102 @@ const stylesAuth = StyleSheet.create({
     borderColor: "rgba(255,255,255,0.15)",
     cursor: Platform.OS === "web" ? "pointer" : "auto",
   },
+  buttonText: { color: "#fff", fontWeight: "bold", fontFamily: SERIF },
+  pressed: { opacity: 0.75 },
+  bodyWrap: { marginTop: 20, backgroundColor: "rgba(38, 83, 108, 0.62)", borderRadius: 14, padding: 16 },
+  h1: { fontSize: 26, fontWeight: "900", color: "#fff", fontFamily: SERIF },
+  p: { marginTop: 10, color: "rgba(255,255,255,0.9)", lineHeight: 22 },
+  actions: { marginTop: 16, flexDirection: "row", gap: 12, flexWrap: "wrap" },
+});
 
-  buttonText: {
-    color: "#fff",
-    fontWeight: "bold",
-    fontFamily: SERIF,
+const styles = StyleSheet.create({
+  screen: { flex: 1 },
+  safeArea: { flex: 1 },
+
+  scrollView: { flex: 1 },
+  scrollContent: { padding: 18, paddingBottom: 120, maxWidth: 920, alignSelf: "center", width: "100%" },
+
+  loadingWrap: { flex: 1, alignItems: "center", justifyContent: "center", gap: 12 },
+  loadingText: { fontWeight: "900", color: "#0b2545" },
+
+  header: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "wrap" },
+  title: { fontSize: 34, fontWeight: "900", color: "#0b2545", fontFamily: SERIF, flexShrink: 1, minWidth: 0 },
+  description: { color: "#374151", lineHeight: 22, marginTop: 10 },
+
+  subtle: { color: "#6b7280", marginTop: 8 },
+
+  card: {
+    marginTop: 14,
+    backgroundColor: "#fff",
+    borderWidth: 1,
+    borderColor: "#e5e7eb",
+    borderRadius: 14,
+    padding: 16,
+    gap: 10,
   },
+
+  sectionTitle: { fontSize: 16, fontWeight: "900", color: "#0b2545", fontFamily: SERIF },
+  paragraph: { color: "#1f2937", lineHeight: 22 },
+
+  input: {
+    borderWidth: 1,
+    borderColor: "#d1d5db",
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    color: "#111827",
+    backgroundColor: "#fff",
+  },
+  longInput: { minHeight: 110, textAlignVertical: "top" },
+
+  choiceRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    borderWidth: 1,
+    borderColor: "#d1d5db",
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    backgroundColor: "#fff",
+  },
+  choiceRowOn: { borderColor: "#0F766E" },
+  choiceDot: { width: 18, height: 18, borderRadius: 999, borderWidth: 2, borderColor: "#9ca3af" },
+  choiceDotOn: { borderColor: "#0F766E" },
+  choiceText: { color: "#111827" },
+
+  colorSwatch: { width: 42, height: 42, borderRadius: 12, borderWidth: 1, borderColor: "#d1d5db" },
+  presetRow: { flexDirection: "row", gap: 10, flexWrap: "wrap" },
+  presetDot: { width: 28, height: 28, borderRadius: 999, borderWidth: 2, borderColor: "rgba(0,0,0,0.08)" },
+  presetDotOn: { borderColor: "#0F766E" },
+
+  qImageNative: { width: "100%", height: 220, borderRadius: 12, borderWidth: 1, borderColor: "#e5e7eb" },
+
+  btnSmall: {
+    borderWidth: 1,
+    borderColor: "rgba(15, 118, 110, 0.25)",
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    borderRadius: 18,
+    backgroundColor: "rgba(15, 118, 110, 0.08)",
+  },
+  btnSmallText: { color: "#0b2545", fontWeight: "900", fontFamily: SERIF },
+
+  submitButton: { marginTop: 16, borderRadius: 14, backgroundColor: "#0b2545", alignItems: "center", paddingVertical: 14 },
+  submitButtonText: { color: "#fff", fontWeight: "900", fontFamily: SERIF, fontSize: 16 },
+
+  disabled: { opacity: 0.6 },
+  pressed: { opacity: 0.8 },
+
+  checkboxRow: { flexDirection: "row", alignItems: "center", gap: 10, paddingVertical: 6 },
+  checkboxBox: { width: 22, height: 22, borderRadius: 6, borderWidth: 1, borderColor: "#9ca3af", alignItems: "center", justifyContent: "center" },
+  checkboxBoxOn: { borderColor: "#0F766E" },
+  checkboxMark: { fontWeight: "900", color: "#0F766E" },
+  checkboxLabel: { color: "#111827" },
+
+  qHeaderRow: { flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between", gap: 10 },
+
+  audioMetaRow: { flexDirection: "row", justifyContent: "space-between" },
+  audioMetaText: { color: "#6b7280", fontFamily: SERIF },
+  audioBarOuter: { width: "100%", height: 10, borderRadius: 999, overflow: "hidden", borderWidth: 1, borderColor: "#e5e7eb" },
 });
