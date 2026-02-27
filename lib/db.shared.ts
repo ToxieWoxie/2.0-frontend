@@ -16,15 +16,11 @@ type ApiErrorShape =
   | { errors?: Array<{ message?: string }> };
 
 function getApiBase(): string {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const env =
-    ((typeof process !== "undefined" ? (process as any).env : undefined) ??
-      (globalThis as any)?.process?.env) as Record<string, string> | undefined;
 
   return (
-    env?.EXPO_PUBLIC_API_BASE_URL?.trim() ||
-    env?.NEXT_PUBLIC_API_BASE_URL?.trim() ||
-    env?.REACT_APP_API_BASE_URL?.trim() ||
+    process.env.EXPO_PUBLIC_API_BASE_URL?.trim() ||
+    process.env.NEXT_PUBLIC_API_BASE_URL?.trim() ||
+    process.env.REACT_APP_API_BASE_URL?.trim() ||
     ""
   );
 }
